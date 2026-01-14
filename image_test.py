@@ -4,6 +4,9 @@ from skimage.metrics import structural_similarity
 import cv2
 import matplotlib.pyplot as plt
 
+MAX_STEPS = 200
+FLAG_LOCATION = 0.5
+
 
 class ImageTest:
     def __init__(self, imagePath, polygonSize):
@@ -29,11 +32,11 @@ class ImageTest:
         """
 
         # Создаём пустое изображение
-        image = Image.new('RGB', (self.width, self.height))
+        image = Image.new('RGB', (self.width, self.height))  # TODO
         draw = ImageDraw.Draw(image, 'RGBA')
 
         # Размер блока данных одного многоугольника
-        chunkSize = self.polygonSize * 2 + 4
+        chunkSize = self.polygonSize * 2 + 4  # (x,y) per vertex + (RGBA)
         polygons = self.list2Chunks(polygonData, chunkSize)
 
         # Рисуем каждый многоугольник
@@ -42,10 +45,8 @@ class ImageTest:
             vertices = []
 
             # Получаем координаты вершин
-            for _ in range(self.polygonSize):
-                x = int(poly[index] * self.width)
-                y = int(poly[index + 1] * self.height)
-                vertices.append((x, y))
+            for vertex in range(self.polygonSize):
+                vertices.append((int(poly[index] * self.width), int(poly[index + 1] * self.height)))
                 index += 2
 
             # Получаем цвет и прозрачность
@@ -64,9 +65,7 @@ class ImageTest:
         """
         Создаёт изображение и вычисляет отличие от эталона
         """
-
         image = self.polygonDataToImage(polygonData)
-
         if method == "MSE":
             return self.getMse(image)
         else:
@@ -82,7 +81,7 @@ class ImageTest:
             plt.suptitle(header)
 
         # Эталон
-        fig.add_subplot(1, 2, 1)
+        ax = fig.add_subplot(1, 2, 1)
         plt.imshow(self.refImage)
         self.ticksOff(plt)
 
@@ -98,7 +97,6 @@ class ImageTest:
         Создаёт изображение из многоугольников
         и сохраняет сравнение с эталоном
         """
-
         image = self.polygonDataToImage(polygonData)
         self.plotImages(image, header)
         plt.savefig(imageFilePath)
@@ -107,35 +105,30 @@ class ImageTest:
 
     def toCv2(self, pil_image):
         """Преобразует Pillow-изображение в формат OpenCV"""
-        return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+        return  cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
 
     def getMse(self, image):
         """Вычисляет среднеквадратичную ошибку (MSE)"""
-        diff = self.toCv2(image).astype("float") - self.refImageCv2.astype("float")
-        return np.sum(diff ** 2) / float(self.numPixels)
+        return np.sum((self.toCv2(image).astype("float") - self.refImageCv2.astype("float")) ** 2)/float(self.numPixels)
 
     def getSsim(self, image):
         """Вычисляет индекс структурного сходства (SSIM)"""
-        return structural_similarity(
-            self.toCv2(image),
-            self.refImageCv2,
-            multichannel=True
-        )
+        return structural_similarity(self.toCv2(image), self.refImageCv2, multichannel=True)
 
     def list2Chunks(self, data, chunkSize):
         """Разбивает список на блоки фиксированного размера"""
-        for i in range(0, len(data), chunkSize):
-            yield data[i:i + chunkSize]
+        for chunk in range(0, len(data), chunkSize):
+            yield data[chunk:chunk + chunkSize]
 
     def ticksOff(self, plot):
         """Отключает оси и подписи на графике"""
-        plot.tick_params(
+        plt.tick_params(
             axis='both',
             which='both',
             bottom=False,
-            top=False,
             left=False,
+            top=False,
             right=False,
             labelbottom=False,
-            labelleft=False
+            labelleft=False,
         )
